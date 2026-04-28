@@ -265,7 +265,14 @@ function renderExecutiveAlert(mcw, cx) {
   setText("alertHeadline", headline);
   setText("alertSubline", subline);
   setText("alertNetAdvantage", formatNetGap(mcw.net, cx.net));
-  setText("alertPressureLeader", `${pressureLeader} higher pressure ${formatSignedPercentPoint(pressureGap)}`);
+  const pressureValue = Math.abs(pressureGap * 100).toFixed(1);
+
+setText(
+  "alertPressureLeader",
+  pressureLeader === "Balanced"
+    ? "Pressure stable"
+    : `${pressureLeader} higher pressure ${pressureValue}%`
+);
   setText("alertRiskBrands", riskBrands.length ? riskBrands.map((r) => r.brand).join(", ") : "None");
 
   const totalDeposit = mcw.deposit + cx.deposit;
@@ -373,8 +380,8 @@ function getMomentumLabel(momentum) {
 
 function formatSignedPercentPoint(value) {
   const points = Math.abs(toNumber(value) * 100).toFixed(1);
-  if (value > 0) return `+${points}%`;
-if (value < 0) return `-${points}%`;
+  if (value > 0) return `+${points}% risk increase`;
+  if (value < 0) return `${points}% risk improvement`;
   return "";
 }
 
