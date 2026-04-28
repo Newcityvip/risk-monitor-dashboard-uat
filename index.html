@@ -287,14 +287,25 @@
       </section>
 
       <section class="panel chart-panel" id="trend">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Hourly / Historical</p>
-            <h3>Trend from History</h3>
-            <p class="muted">Shows the latest available history points, up to 7 days.</p>
-          </div>
-        </div>
-        <canvas id="trendChart"></canvas>
+
+  <div class="panel-head">
+    <div>
+      <p class="eyebrow">Hourly / Historical</p>
+      <h3>Trend from History</h3>
+      <p class="muted">Shows deposit and withdrawal trend by selected group.</p>
+    </div>
+
+    <div class="table-controls">
+      <select id="historyTrendFilter">
+        <option value="all">All Brands</option>
+        <option value="MCW">MCW Only</option>
+        <option value="CX">CX Only</option>
+      </select>
+    </div>
+  </div>
+
+  <canvas id="trendChart"></canvas>
+
       </section>
 
 
