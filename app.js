@@ -9,6 +9,7 @@ let state = {
   rows: [],
   latest: null,
   history: [],
+  rawHistory: [],
   hourlySelectedBrands: [...ALL_BRANDS],
   charts: {}
 };
@@ -41,7 +42,8 @@ async function loadDashboard() {
     }
 
     state.latest = latestResult.value;
-    state.history = historyResult.status === "fulfilled" ? normalizeHistory(historyResult.value) : [];
+    state.rawHistory = historyResult.status === "fulfilled" ? normalizeRawHistory(historyResult.value) : [];
+    state.history = normalizeHistory(state.rawHistory);
     state.rows = normalizeLatest(state.latest);
 
     renderDashboard();
@@ -66,7 +68,10 @@ function normalizeLatest(raw) {
       const item = raw.brands[brand] || {};
       const deposit = toNumber(item.deposit_amount);
       const withdrawal = toNumber(item.withdrawal_amount);
-      return buildBrandRow(brand, deposit, withdrawal);
+      return buildBrandRow(brand, deposit, withdrawal, {
+        depositDiff: toNumber(item.deposit_difference),
+        withdrawalDiff: toNumber(item.withdrawal_difference)
+      });
     });
   }
 
@@ -135,7 +140,7 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function buildBrandRow(brand, deposit, withdrawal) {
+function buildBrandRow(brand, deposit, withdrawal, extra = {}) {
   const net = deposit - withdrawal;
   const pressure = deposit > 0 ? withdrawal / deposit : withdrawal > 0 ? 9.99 : 0;
   const group = MCW_BRANDS.includes(brand) ? "MCW" : "CX";
@@ -147,6 +152,8 @@ function buildBrandRow(brand, deposit, withdrawal) {
     withdrawal,
     net,
     pressure,
+    depositDiff: toNumber(extra.depositDiff),
+    withdrawalDiff: toNumber(extra.withdrawalDiff),
     risk: getRiskLevel(pressure, net)
   };
 }
@@ -166,26 +173,33 @@ function renderDashboard() {
 
   $("lastUpdated").textContent = getLastUpdatedText(state.latest);
 
+  const previousRows = getPreviousRows();
+  const prevMcw = previousRows.length ? sumRows(previousRows.filter((r) => r.group === "MCW")) : null;
+  const prevCx = previousRows.length ? sumRows(previousRows.filter((r) => r.group === "CX")) : null;
+
   // Overview is a Rival Snapshot now.
   // We do NOT combine MCW + CX here, because they are rival groups.
   // The top cards show MCW net, CX net, net advantage, and pressure gap.
-  setText("totalDeposit", money(mcw.net));
-  setText("totalWithdrawal", money(cx.net));
-  setText("netFlow", formatNetGap(mcw.net, cx.net));
-  setText("withdrawalPressure", formatPressureGap(mcw.pressure, cx.pressure));
+  setMetric("totalDeposit", money(mcw.net), trendBadge(mcw.net, prevMcw?.net, "money"));
+  setMetric("totalWithdrawal", money(cx.net), trendBadge(cx.net, prevCx?.net, "money"));
+  setMetric("netFlow", formatNetGap(mcw.net, cx.net), trendBadge(mcw.net - cx.net, prevMcw && prevCx ? prevMcw.net - prevCx.net : null, "money"));
+  setMetric("withdrawalPressure", formatPressureGap(mcw.pressure, cx.pressure), trendBadge(mcw.pressure - cx.pressure, prevMcw && prevCx ? prevMcw.pressure - prevCx.pressure : null, "pp"));
 
-  setText("mcwDeposit", money(mcw.deposit));
-  setText("mcwWithdrawal", money(mcw.withdrawal));
-  setText("mcwNet", money(mcw.net));
-  setText("mcwPressure", percent(mcw.pressure));
+  setMetric("mcwDeposit", money(mcw.deposit), trendBadge(mcw.deposit, prevMcw?.deposit, "money"));
+  setMetric("mcwWithdrawal", money(mcw.withdrawal), trendBadge(mcw.withdrawal, prevMcw?.withdrawal, "money"));
+  setMetric("mcwNet", money(mcw.net), trendBadge(mcw.net, prevMcw?.net, "money"));
+  setMetric("mcwPressure", percent(mcw.pressure), trendBadge(mcw.pressure, prevMcw?.pressure, "pp"));
 
-  setText("cxGroupDeposit", money(cx.deposit));
-  setText("cxGroupWithdrawal", money(cx.withdrawal));
-  setText("cxGroupNet", money(cx.net));
-  setText("cxGroupPressure", percent(cx.pressure));
+  setMetric("cxGroupDeposit", money(cx.deposit), trendBadge(cx.deposit, prevCx?.deposit, "money"));
+  setMetric("cxGroupWithdrawal", money(cx.withdrawal), trendBadge(cx.withdrawal, prevCx?.withdrawal, "money"));
+  setMetric("cxGroupNet", money(cx.net), trendBadge(cx.net, prevCx?.net, "money"));
+  setMetric("cxGroupPressure", percent(cx.pressure), trendBadge(cx.pressure, prevCx?.pressure, "pp"));
 
   renderDirectComparison(m1, cxBrand);
   renderRiskList();
+  renderExecutiveAlert(mcw, cx);
+  renderRiskMomentum();
+  renderRiskDrivers(mcw, cx);
   renderTable();
   renderGroupChart(mcw, cx);
   renderBrandNetChart();
@@ -216,6 +230,175 @@ function formatPressureGap(mcwPressure, cxPressure) {
   if (gap > 0) return `MCW Higher Withdrawal Pressure +${points}%`;
 if (gap < 0) return `CX Higher Withdrawal Pressure +${points}%`;
   return "Balanced Pressure";
+}
+
+
+function renderExecutiveAlert(mcw, cx) {
+  const pressureGap = cx.pressure - mcw.pressure;
+  const pressureLeader = pressureGap > 0 ? "CX" : pressureGap < 0 ? "MCW" : "Balanced";
+  const pressureText = pressureLeader === "Balanced"
+    ? "Balanced withdrawal pressure"
+    : `${pressureLeader} higher pressure +${Math.abs(pressureGap * 100).toFixed(1)}pp`;
+
+  const netGap = mcw.net - cx.net;
+  const netWinner = netGap >= 0 ? "MCW" : "CX";
+  const riskBrands = [...state.rows]
+    .filter((r) => r.risk === "High" || r.pressure >= 1)
+    .sort((a, b) => b.pressure - a.pressure || a.net - b.net)
+    .slice(0, 3);
+
+  const headline = pressureLeader === "Balanced"
+    ? `Pressure balanced • ${netWinner} has stronger net position`
+    : `${pressureText} • ${netWinner} stronger net flow`;
+  const subline = riskBrands.length
+    ? `Watch brands: ${riskBrands.map((r) => `${r.brand} ${percent(r.pressure)}`).join(" • ")}`
+    : "No critical pressure spike detected from current live rules.";
+
+  setText("alertHeadline", headline);
+  setText("alertSubline", subline);
+  setText("alertNetAdvantage", formatNetGap(mcw.net, cx.net));
+  setText("alertPressureLeader", pressureText);
+  setText("alertRiskBrands", riskBrands.length ? riskBrands.map((r) => r.brand).join(", ") : "None");
+
+  const totalDeposit = mcw.deposit + cx.deposit;
+  const mcwShare = totalDeposit > 0 ? (mcw.deposit / totalDeposit) * 100 : 50;
+  const cxShare = 100 - mcwShare;
+  setText("mcwShareLabel", `MCW ${mcwShare.toFixed(1)}% deposit share`);
+  setText("cxShareLabel", `CX ${cxShare.toFixed(1)}% deposit share`);
+  const mcwBar = $("mcwDominanceBar");
+  const cxBar = $("cxDominanceBar");
+  if (mcwBar) mcwBar.style.width = `${Math.max(8, mcwShare)}%`;
+  if (cxBar) cxBar.style.width = `${Math.max(8, cxShare)}%`;
+
+  const alert = $("executiveAlert");
+  if (alert) {
+    alert.classList.remove("alert-high", "alert-watch", "alert-normal");
+    alert.classList.add(riskBrands.length ? "alert-high" : Math.max(mcw.pressure, cx.pressure) >= 0.8 ? "alert-watch" : "alert-normal");
+  }
+}
+
+function renderRiskMomentum() {
+  if (!$("riskMomentumList")) return;
+  const recentSnapshots = state.rawHistory.slice(-4, -1).map((item) => normalizeLatest(item));
+  const momentumRows = state.rows.map((row) => {
+    const recent = recentSnapshots
+      .map((snapshot) => snapshot.find((r) => r.brand === row.brand)?.pressure)
+      .filter((value) => Number.isFinite(value));
+    const avgPressure = recent.length ? recent.reduce((sum, value) => sum + value, 0) / recent.length : row.pressure;
+    const momentum = row.pressure - avgPressure;
+    return { ...row, momentum };
+  }).sort((a, b) => Math.abs(b.momentum) - Math.abs(a.momentum) || b.pressure - a.pressure).slice(0, 6);
+
+  $("riskMomentumList").innerHTML = momentumRows.map((r) => {
+    const label = getMomentumLabel(r.momentum);
+    return `
+      <div class="signal-row">
+        <div>
+          <strong>${r.brand}</strong>
+          <span>${r.group} • Current ${percent(r.pressure)} • ${label.text}</span>
+        </div>
+        <div class="signal-right ${label.className}">
+          <strong>${formatSignedPercentPoint(r.momentum)}</strong>
+          <small>${r.risk}</small>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderRiskDrivers(mcw, cx) {
+  if (!$("riskDriversList")) return;
+  const drivers = [];
+
+  const highPressure = [...state.rows].sort((a, b) => b.pressure - a.pressure).slice(0, 1)[0];
+  if (highPressure) drivers.push({
+    title: `${highPressure.brand} highest pressure`,
+    body: `${percent(highPressure.pressure)} withdrawal pressure • Net ${money(highPressure.net)}`,
+    level: highPressure.pressure >= 1 ? "danger" : highPressure.pressure >= 0.8 ? "warn" : "good"
+  });
+
+  const wdSpike = [...state.rows].sort((a, b) => b.withdrawalDiff - a.withdrawalDiff).slice(0, 1)[0];
+  if (wdSpike && wdSpike.withdrawalDiff > 0) drivers.push({
+    title: `${wdSpike.brand} withdrawal spike`,
+    body: `Withdrawal change +${money(wdSpike.withdrawalDiff)} from source difference`,
+    level: "warn"
+  });
+
+  const weakDeposit = [...state.rows].filter((r) => r.depositDiff < 0).sort((a, b) => a.depositDiff - b.depositDiff).slice(0, 1)[0];
+  if (weakDeposit) drivers.push({
+    title: `${weakDeposit.brand} deposit weakness`,
+    body: `Deposit change ${money(weakDeposit.depositDiff)} from source difference`,
+    level: "warn"
+  });
+
+  drivers.push({
+    title: "Group pressure gap",
+    body: formatPressureGap(mcw.pressure, cx.pressure),
+    level: Math.max(mcw.pressure, cx.pressure) >= 1 ? "danger" : "good"
+  });
+
+  $("riskDriversList").innerHTML = drivers.slice(0, 5).map((item) => `
+    <div class="signal-row">
+      <div>
+        <strong>${item.title}</strong>
+        <span>${item.body}</span>
+      </div>
+      <span class="driver-dot ${item.level}"></span>
+    </div>
+  `).join("");
+}
+
+function getMomentumLabel(momentum) {
+  if (momentum >= 0.10) return { text: "Rising fast", className: "bad" };
+  if (momentum >= 0.03) return { text: "Rising", className: "warn" };
+  if (momentum <= -0.03) return { text: "Easing", className: "good" };
+  return { text: "Stable", className: "neutral" };
+}
+
+function formatSignedPercentPoint(value) {
+  const points = Math.abs(toNumber(value) * 100).toFixed(1);
+  if (value > 0) return `+${points}pp`;
+  if (value < 0) return `-${points}pp`;
+  return "0.0pp";
+}
+
+function getPreviousRows() {
+  if (!state.rawHistory.length) return [];
+  const latestTime = getSnapshotTime(state.latest);
+  const candidates = state.rawHistory.filter((item) => {
+    const time = getSnapshotTime(item);
+    return !latestTime || !time || time < latestTime;
+  });
+  const snapshot = candidates.length ? candidates[candidates.length - 1] : state.rawHistory[state.rawHistory.length - 2];
+  return snapshot ? normalizeLatest(snapshot) : [];
+}
+
+function getSnapshotTime(item) {
+  const raw = item?.updated_at_utc || item?.timestamp || item?.updated_at || item?.created_at || item?.time || item?.date;
+  if (!raw) return null;
+  const time = new Date(raw).getTime();
+  return Number.isNaN(time) ? null : time;
+}
+
+function trendBadge(current, previous, type = "money") {
+  if (previous === null || previous === undefined || !Number.isFinite(Number(previous))) return "";
+  const diff = toNumber(current) - toNumber(previous);
+  if (Math.abs(diff) < 0.000001) return `<span class="trend-badge flat">→ No change</span>`;
+  const arrow = diff > 0 ? "↑" : "↓";
+  const text = type === "pp" ? formatSignedPercentPoint(diff) : `${diff > 0 ? "+" : ""}${money(diff)}`;
+  return `<span class="trend-badge ${diff > 0 ? "up" : "down"}">${arrow} ${text}</span>`;
+}
+
+function setMetric(id, value, trendHtml = "") {
+  const el = $(id);
+  if (!el) return;
+  el.innerHTML = `${value}${trendHtml || ""}`;
+}
+
+function normalizeRawHistory(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.history)) return raw.history;
+  return [];
 }
 
 function renderDirectComparison(m1, cxBrand) {
