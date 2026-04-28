@@ -232,13 +232,18 @@ if (gap < 0) return `CX Higher Withdrawal Pressure +${points}%`;
   return "Balanced Pressure";
 }
 
-
+function formatPressureDifference(value) {
+  const points = Math.abs(toNumber(value) * 100).toFixed(1);
+  if (value > 0) return `+${points}% higher`;
+  if (value < 0) return `${points}% lower`;
+  return "No visible change";
+}
 function renderExecutiveAlert(mcw, cx) {
   const pressureGap = cx.pressure - mcw.pressure;
   const pressureLeader = pressureGap > 0 ? "CX" : pressureGap < 0 ? "MCW" : "Balanced";
   const pressureText = pressureLeader === "Balanced"
     ? "Balanced withdrawal pressure"
-    : `${pressureLeader} higher pressure +${Math.abs(pressureGap * 100).toFixed(1)}pp`;
+: `${pressureLeader} higher withdrawal pressure ${formatPressureDifference(pressureGap)}`;
 
   const netGap = mcw.net - cx.net;
   const netWinner = netGap >= 0 ? "MCW" : "CX";
@@ -356,10 +361,7 @@ function getMomentumLabel(momentum) {
 }
 
 function formatSignedPercentPoint(value) {
-  const points = Math.abs(toNumber(value) * 100).toFixed(1);
-  if (value > 0) return `+${points}pp`;
-  if (value < 0) return `-${points}pp`;
-  return "0.0pp";
+  return formatPressureDifference(value);
 }
 
 function getPreviousRows() {
@@ -385,7 +387,7 @@ function trendBadge(current, previous, type = "money") {
   const diff = toNumber(current) - toNumber(previous);
   if (Math.abs(diff) < 0.000001) return `<span class="trend-badge flat">→ No change</span>`;
   const arrow = diff > 0 ? "↑" : "↓";
-  const text = type === "pp" ? formatSignedPercentPoint(diff) : `${diff > 0 ? "+" : ""}${money(diff)}`;
+  const text = type === "pp" ? formatPressureDifference(diff) : `${diff > 0 ? "+" : ""}${money(diff)}`;
   return `<span class="trend-badge ${diff > 0 ? "up" : "down"}">${arrow} ${text}</span>`;
 }
 
