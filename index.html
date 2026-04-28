@@ -53,6 +53,43 @@
         </div>
       </header>
 
+
+
+      <section id="executiveAlert" class="executive-alert">
+        <div class="alert-main">
+          <span class="alert-icon">⚠️</span>
+          <div>
+            <p class="eyebrow">Executive Alert</p>
+            <h3 id="alertHeadline">Analyzing live risk position...</h3>
+            <p id="alertSubline" class="muted">Waiting for latest deposit and withdrawal data.</p>
+          </div>
+        </div>
+        <div class="alert-kpis">
+          <div>
+            <span>Net Advantage</span>
+            <strong id="alertNetAdvantage">--</strong>
+          </div>
+          <div>
+            <span>Pressure Leader</span>
+            <strong id="alertPressureLeader">--</strong>
+          </div>
+          <div>
+            <span>Risk Brands</span>
+            <strong id="alertRiskBrands">--</strong>
+          </div>
+        </div>
+        <div class="dominance-wrap">
+          <div class="dominance-labels">
+            <span id="mcwShareLabel">MCW --</span>
+            <span id="cxShareLabel">CX --</span>
+          </div>
+          <div class="dominance-bar">
+            <span id="mcwDominanceBar" class="mcw-bar" style="width: 50%"></span>
+            <span id="cxDominanceBar" class="cx-bar" style="width: 50%"></span>
+          </div>
+        </div>
+      </section>
+
       <section id="overview" class="status-strip">
         <div class="status-card">
           <span>MCW Net Flow</span>
@@ -126,6 +163,34 @@
             <span id="riskLevel" class="pill neutral">Normal</span>
           </div>
           <div id="riskList" class="risk-list"></div>
+        </article>
+      </section>
+
+
+
+      <section class="grid two-col decision-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Risk Momentum</p>
+              <h3>Pressure Direction</h3>
+              <p class="muted">Compares current pressure with recent history average.</p>
+            </div>
+            <span class="pill neutral">Live</span>
+          </div>
+          <div id="riskMomentumList" class="signal-list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Top Risk Drivers</p>
+              <h3>What Needs Attention</h3>
+              <p class="muted">Highlights pressure, withdrawal spikes, and weak deposits.</p>
+            </div>
+            <span class="pill neutral">CEO View</span>
+          </div>
+          <div id="riskDriversList" class="signal-list"></div>
         </article>
       </section>
 
@@ -307,10 +372,10 @@
       <section class="panel alerts-panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Future Ready</p>
-            <h3>Alert Preview</h3>
+            <p class="eyebrow">Decision Notes</p>
+            <h3>Auto Summary</h3>
           </div>
-          <span class="pill neutral">Phase 2</span>
+          <span class="pill good">Active</span>
         </div>
         <div id="alertPreview" class="alert-preview"></div>
       </section>
