@@ -242,8 +242,8 @@ function renderExecutiveAlert(mcw, cx) {
   const pressureGap = cx.pressure - mcw.pressure;
   const pressureLeader = pressureGap > 0 ? "CX" : pressureGap < 0 ? "MCW" : "Balanced";
   const pressureText = pressureLeader === "Balanced"
-    ? "Balanced withdrawal pressure"
-: `${pressureLeader} higher withdrawal pressure ${formatPressureDifference(pressureGap)}`;
+  ? "Balanced withdrawal pressure"
+  : `${pressureLeader} withdrawal pressure ${formatPressureDifference(pressureGap)} ${pressureLeader === "CX" ? "than MCW" : "than CX"}`;
 
   const netGap = mcw.net - cx.net;
   const netWinner = netGap >= 0 ? "MCW" : "CX";
@@ -253,8 +253,8 @@ function renderExecutiveAlert(mcw, cx) {
     .slice(0, 3);
 
   const headline = pressureLeader === "Balanced"
-    ? `Pressure balanced • ${netWinner} has stronger net position`
-    : `${pressureText} • ${netWinner} stronger net flow`;
+    ? `${netWinner} leading • Stable pressure`
+: `${pressureLeader} risk higher • ${netWinner} stronger net`;
   const subline = riskBrands.length
     ? `Watch brands: ${riskBrands.map((r) => `${r.brand} ${percent(r.pressure)}`).join(" • ")}`
     : "No critical pressure spike detected from current live rules.";
@@ -262,7 +262,7 @@ function renderExecutiveAlert(mcw, cx) {
   setText("alertHeadline", headline);
   setText("alertSubline", subline);
   setText("alertNetAdvantage", formatNetGap(mcw.net, cx.net));
-  setText("alertPressureLeader", pressureText);
+  setText("alertPressureLeader", `${pressureLeader} higher pressure ${formatSignedPercentPoint(pressureGap)}`);
   setText("alertRiskBrands", riskBrands.length ? riskBrands.map((r) => r.brand).join(", ") : "None");
 
   const totalDeposit = mcw.deposit + cx.deposit;
