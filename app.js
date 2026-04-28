@@ -235,8 +235,8 @@ if (gap < 0) return `CX Higher Withdrawal Pressure +${points}%`;
 function formatPressureDifference(value) {
   const points = Math.abs(toNumber(value) * 100).toFixed(1);
   if (value > 0) return `+${points}% higher`;
-  if (value < 0) return `${points}% lower`;
-  return "No visible change";
+  if (value < 0) return `-${points}% lower`;
+  return "";
 }
 function renderExecutiveAlert(mcw, cx) {
   const pressureGap = cx.pressure - mcw.pressure;
@@ -284,18 +284,26 @@ function renderExecutiveAlert(mcw, cx) {
 
 function renderRiskMomentum() {
   if (!$("riskMomentumList")) return;
+
   const recentSnapshots = state.rawHistory.slice(-4, -1).map((item) => normalizeLatest(item));
+
   const momentumRows = state.rows.map((row) => {
     const recent = recentSnapshots
       .map((snapshot) => snapshot.find((r) => r.brand === row.brand)?.pressure)
       .filter((value) => Number.isFinite(value));
-    const avgPressure = recent.length ? recent.reduce((sum, value) => sum + value, 0) / recent.length : row.pressure;
+
+    const avgPressure = recent.length
+      ? recent.reduce((sum, value) => sum + value, 0) / recent.length
+      : row.pressure;
+
     const momentum = row.pressure - avgPressure;
     return { ...row, momentum };
   }).sort((a, b) => Math.abs(b.momentum) - Math.abs(a.momentum) || b.pressure - a.pressure).slice(0, 6);
 
   $("riskMomentumList").innerHTML = momentumRows.map((r) => {
     const label = getMomentumLabel(r.momentum);
+    const movementText = formatSignedPercentPoint(r.momentum);
+
     return `
       <div class="signal-row">
         <div>
@@ -303,7 +311,7 @@ function renderRiskMomentum() {
           <span>${r.group} • Current ${percent(r.pressure)} • ${label.text}</span>
         </div>
         <div class="signal-right ${label.className}">
-          <strong>${formatSignedPercentPoint(r.momentum)}</strong>
+          <strong>${movementText || "Stable"}</strong>
           <small>${r.risk}</small>
         </div>
       </div>
@@ -354,14 +362,17 @@ function renderRiskDrivers(mcw, cx) {
 }
 
 function getMomentumLabel(momentum) {
-  if (momentum >= 0.10) return { text: "Rising fast", className: "bad" };
-  if (momentum >= 0.03) return { text: "Rising", className: "warn" };
-  if (momentum <= -0.03) return { text: "Easing", className: "good" };
+  if (momentum >= 0.10) return { text: "High Risk", className: "bad" };
+  if (momentum >= 0.03) return { text: "Increasing Risk", className: "warn" };
+  if (momentum <= -0.03) return { text: "Improving", className: "good" };
   return { text: "Stable", className: "neutral" };
 }
 
 function formatSignedPercentPoint(value) {
-  return formatPressureDifference(value);
+  const points = Math.abs(toNumber(value) * 100).toFixed(1);
+  if (value > 0) return `+${points}pp`;
+  if (value < 0) return `-${points}pp`;
+  return "";
 }
 
 function getPreviousRows() {
