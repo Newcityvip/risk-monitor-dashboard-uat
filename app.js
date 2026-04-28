@@ -408,7 +408,17 @@ function trendBadge(current, previous, type = "money") {
   const diff = toNumber(current) - toNumber(previous);
   if (Math.abs(diff) < 0.000001) return `<span class="trend-badge flat">→ No change</span>`;
   const arrow = diff > 0 ? "↑" : "↓";
-  const text = type === "pp" ? formatPressureDifference(diff) : `${diff > 0 ? "+" : ""}${money(diff)}`;
+  let text;
+
+if (type === "pp") {
+  text = formatPressureDifference(diff);
+} else {
+  if (diff > 0) {
+    text = `Gap increasing ${money(diff)}`;
+  } else {
+    text = `CX closing gap ${money(Math.abs(diff))}`;
+  }
+}
   return `<span class="trend-badge ${diff > 0 ? "up" : "down"}">${arrow} ${text}</span>`;
 }
 
