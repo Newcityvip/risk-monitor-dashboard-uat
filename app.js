@@ -20,6 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("refreshBtn").addEventListener("click", loadDashboard);
   $("brandSearch").addEventListener("input", renderTable);
   $("groupFilter").addEventListener("change", renderTable);
+  if ($("historyTrendFilter")) {
+  $("historyTrendFilter").addEventListener("change", renderTrendChart);
+}
 
   if ($("hourlyDateFilter")) $("hourlyDateFilter").addEventListener("change", renderHourlySection);
   if ($("hourlyMetricFilter")) $("hourlyMetricFilter").addEventListener("change", renderHourlySection);
