@@ -373,8 +373,8 @@ function getMomentumLabel(momentum) {
 
 function formatSignedPercentPoint(value) {
   const points = Math.abs(toNumber(value) * 100).toFixed(1);
-  if (value > 0) return `+${points}pp`;
-  if (value < 0) return `-${points}pp`;
+  if (value > 0) return `+${points}%`;
+if (value < 0) return `-${points}%`;
   return "";
 }
 
