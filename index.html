@@ -1,3 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Risk Monitor Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-logo">RM</div>
+        <div>
+          <h1>Risk Monitor</h1>
+          <p>Deposit vs Withdrawal Dashboard</p>
+        </div>
+      </div>
+
+      <nav class="nav-list">
+        <a href="#overview" class="active">Overview</a>
+        <a href="#comparison">M1 vs CX</a>
+        <a href="#groups">MCW vs CX</a>
+        <a href="#brands">All Brands</a>
+        <a href="#trend">7-Day Trend</a>
+        <a href="#hourly">Hourly Trend</a>
+      </nav>
+
+      <div class="sidebar-note">
+        <span class="pulse-dot"></span>
+        <div>
+          <strong>Auto Data</strong>
+          <small>Live data from Worker + history backup</small>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Production Dashboard</p>
+          <h2>Risk Monitoring Control Center</h2>
+          <p class="muted">Compare brand deposits, withdrawals, net flow, and withdrawal pressure.</p>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="refreshBtn" class="btn primary">Refresh Data</button>
+<select id="reportDateFilter" class="btn ghost" title="Report Date"></select>
+<button id="downloadReportBtn" class="btn ghost">Download Report</button>
+          <div class="last-update">
+            <span>Last Updated</span>
+            <strong id="lastUpdated">Loading...</strong>
+          </div>
+        </div>
+      </header>
+
+
+
+      <section id="executiveAlert" class="executive-alert">
+        <div class="alert-main">
+          <span class="alert-icon">⚠️</span>
+          <div>
+            <p class="eyebrow">Executive Alert</p>
+            <h3 id="alertHeadline">Analyzing live risk position...</h3>
+            <p id="alertSubline" class="muted">Waiting for latest deposit and withdrawal data.</p>
+          </div>
+        </div>
+        <div class="alert-kpis">
+          <div>
+            <span>Net Advantage</span>
+            <strong id="alertNetAdvantage">--</strong>
+          </div>
+          <div>
+            <span>Pressure Leader</span>
+            <strong id="alertPressureLeader">--</strong>
+          </div>
+          <div>
+            <span>Risk Brands</span>
+            <strong id="alertRiskBrands">--</strong>
+          </div>
+        </div>
+        <div class="dominance-wrap">
+          <div class="dominance-labels">
+            <span id="mcwShareLabel">MCW --</span>
+            <span id="cxShareLabel">CX --</span>
+          </div>
+          <div class="dominance-bar">
+            <span id="mcwDominanceBar" class="mcw-bar" style="width: 50%"></span>
+            <span id="cxDominanceBar" class="cx-bar" style="width: 50%"></span>
+          </div>
+        </div>
+      </section>
+
+      <section id="overview" class="status-strip">
+        <div class="status-card">
+          <span>MCW Net Flow</span>
+          <strong id="totalDeposit">--</strong>
+          <small>MCW deposit - withdrawal</small>
+        </div>
+        <div class="status-card">
+          <span>CX Net Flow</span>
+          <strong id="totalWithdrawal">--</strong>
+          <small>CX deposit - withdrawal</small>
+        </div>
+        <div class="status-card">
+          <span>Net Gap</span>
+          <strong id="netFlow">--</strong>
+          <small>Stronger group by net flow</small>
+        </div>
+        <div class="status-card">
+          <span>Pressure Gap</span>
+          <strong id="withdrawalPressure">--</strong>
+          <small>Higher withdrawal pressure</small>
+        </div>
+      </section>
+
+      <section class="grid two-col" id="comparison">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Direct Comparison</p>
+              <h3>M1 vs CX</h3>
+            </div>
+            <span id="m1CxWinner" class="pill neutral">Calculating</span>
+          </div>
+
+          <div class="compare-box">
+            <div class="compare-item">
+              <div class="compare-title">
+                <strong>M1</strong>
+                <span>MCW flagship</span>
+              </div>
+              <dl>
+                <div><dt>Deposit</dt><dd id="m1Deposit">--</dd></div>
+                <div><dt>Withdrawal</dt><dd id="m1Withdrawal">--</dd></div>
+                <div><dt>Net Flow</dt><dd id="m1Net">--</dd></div>
+                <div><dt>Pressure</dt><dd id="m1Pressure">--</dd></div>
+              </dl>
+            </div>
+
+            <div class="vs-badge">VS</div>
+
+            <div class="compare-item">
+              <div class="compare-title">
+                <strong>CX</strong>
+                <span>CX flagship</span>
+              </div>
+              <dl>
+                <div><dt>Deposit</dt><dd id="cxDeposit">--</dd></div>
+                <div><dt>Withdrawal</dt><dd id="cxWithdrawal">--</dd></div>
+                <div><dt>Net Flow</dt><dd id="cxNet">--</dd></div>
+                <div><dt>Pressure</dt><dd id="cxPressure">--</dd></div>
+              </dl>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Risk View</p>
+              <h3>Highest Withdrawal Pressure</h3>
+            </div>
+            <span id="riskLevel" class="pill neutral">Normal</span>
+          </div>
+          <div id="riskList" class="risk-list"></div>
+        </article>
+      </section>
+
+
+
+      <section class="grid two-col decision-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Risk Momentum</p>
+              <h3>Pressure Direction</h3>
+              <p class="muted">Compares current pressure with recent history average.</p>
+            </div>
+            <span class="pill neutral">Live</span>
+          </div>
+          <div id="riskMomentumList" class="signal-list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Top Risk Drivers</p>
+              <h3>What Needs Attention</h3>
+              <p class="muted">Highlights pressure, withdrawal spikes, and weak deposits.</p>
+            </div>
+            <span class="pill neutral">CEO View</span>
+          </div>
+          <div id="riskDriversList" class="signal-list"></div>
+        </article>
+      </section>
+
+      <section class="grid two-col" id="groups">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Group Summary</p>
+              <h3>MCW Brands Total</h3>
+            </div>
+            <span class="pill mcw">MCW</span>
+          </div>
+          <div class="metric-grid">
+            <div><span>Deposit</span><strong id="mcwDeposit">--</strong></div>
+            <div><span>Withdrawal</span><strong id="mcwWithdrawal">--</strong></div>
+            <div><span>Net Flow</span><strong id="mcwNet">--</strong></div>
+            <div><span>Pressure</span><strong id="mcwPressure">--</strong></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Group Summary</p>
+              <h3>CX Brands Total</h3>
+            </div>
+            <span class="pill cx">CX</span>
+          </div>
+          <div class="metric-grid">
+            <div><span>Deposit</span><strong id="cxGroupDeposit">--</strong></div>
+            <div><span>Withdrawal</span><strong id="cxGroupWithdrawal">--</strong></div>
+            <div><span>Net Flow</span><strong id="cxGroupNet">--</strong></div>
+            <div><span>Pressure</span><strong id="cxGroupPressure">--</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid two-col">
+        <article class="panel chart-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Visual Summary</p>
+              <h3>MCW vs CX Deposit / Withdrawal</h3>
+            </div>
+          </div>
+          <canvas id="groupChart"></canvas>
+        </article>
+
+        <article class="panel chart-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Net Flow</p>
+              <h3>Top Brand Comparison</h3>
+            </div>
           </div>
           <canvas id="brandNetChart"></canvas>
         </article>
