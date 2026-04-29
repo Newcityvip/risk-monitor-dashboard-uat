@@ -937,16 +937,31 @@ function downloadDailyReport() {
 
 let rows = state.rows;
 
-if (selectedDate && state.rawHistory?.length) {
-  const daySnapshots = state.rawHistory.filter(item => {
-    const d = item.date || (item.updated_at_utc ? String(item.updated_at_utc).slice(0, 10) : "");
-    return d === selectedDate;
-  });
+if (selectedDate) {
+  const latestDate =
+    state.latest?.date ||
+    (state.latest?.updated_at_utc ? String(state.latest.updated_at_utc).slice(0, 10) : "");
 
-  const selectedSnapshot = daySnapshots[daySnapshots.length - 1];
+  // If selected date is current live date, use dashboard live data
+  if (selectedDate === latestDate) {
+    rows = state.rows;
+  } else if (state.rawHistory?.length) {
+    const daySnapshots = state.rawHistory
+      .filter(item => {
+        const d = item.date || (item.updated_at_utc ? String(item.updated_at_utc).slice(0, 10) : "");
+        return d === selectedDate;
+      })
+      .sort((a, b) => {
+        const ta = new Date(a.updated_at_utc || a.date || 0).getTime();
+        const tb = new Date(b.updated_at_utc || b.date || 0).getTime();
+        return ta - tb;
+      });
 
-  if (selectedSnapshot) {
-    rows = normalizeLatest(selectedSnapshot);
+    const selectedSnapshot = daySnapshots[daySnapshots.length - 1];
+
+    if (selectedSnapshot) {
+      rows = normalizeLatest(selectedSnapshot);
+    }
   }
 }
 
