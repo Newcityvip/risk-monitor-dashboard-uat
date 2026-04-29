@@ -18,6 +18,7 @@ const $ = (id) => document.getElementById(id);
 
 document.addEventListener("DOMContentLoaded", () => {
   $("refreshBtn").addEventListener("click", loadDashboard);
+  if ($("downloadReportBtn")) $("downloadReportBtn").addEventListener("click", downloadDailyReport);
   $("brandSearch").addEventListener("input", renderTable);
   $("groupFilter").addEventListener("change", renderTable);
   if ($("historyTrendFilter")) {
@@ -924,4 +925,49 @@ function showToast(message) {
   toast.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+}
+function downloadDailyReport() {
+  if (!state.rows || state.rows.length === 0) {
+    alert("No data available");
+    return;
+  }
+
+  const rows = state.rows;
+
+  let csv = [];
+  
+  // Header
+  csv.push([
+    "Brand",
+    "Group",
+    "Deposit",
+    "Withdrawal",
+    "Net Flow",
+    "Pressure (%)"
+  ].join(","));
+
+  // Data
+  rows.forEach(r => {
+    const net = (r.deposit || 0) - (r.withdrawal || 0);
+    const pressure = r.deposit ? ((r.withdrawal / r.deposit) * 100).toFixed(2) : 0;
+
+    csv.push([
+      r.brand,
+      r.group,
+      r.deposit || 0,
+      r.withdrawal || 0,
+      net,
+      pressure
+    ].join(","));
+  });
+
+  const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `risk-report-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+
+  URL.revokeObjectURL(url);
 }
