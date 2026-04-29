@@ -938,17 +938,16 @@ function downloadDailyReport() {
 let rows = state.rows;
 
 if (selectedDate && state.rawHistory?.length) {
-  rows = state.rawHistory
-    .filter(r => {
-      const d = r.date || (r.updated_at_utc ? String(r.updated_at_utc).slice(0,10) : "");
-      return d === selectedDate;
-    })
-    .map(r => ({
-      brand: r.brand,
-      group: r.group,
-      deposit: r.deposit,
-      withdrawal: r.withdrawal
-    }));
+  const daySnapshots = state.rawHistory.filter(item => {
+    const d = item.date || (item.updated_at_utc ? String(item.updated_at_utc).slice(0, 10) : "");
+    return d === selectedDate;
+  });
+
+  const selectedSnapshot = daySnapshots[daySnapshots.length - 1];
+
+  if (selectedSnapshot) {
+    rows = normalizeLatest(selectedSnapshot);
+  }
 }
 
   let csv = [];
