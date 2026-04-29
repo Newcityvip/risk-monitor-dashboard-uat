@@ -933,7 +933,23 @@ function downloadDailyReport() {
     return;
   }
 
-  const rows = state.rows;
+ const selectedDate = $("reportDateFilter")?.value;
+
+let rows = state.rows;
+
+if (selectedDate && state.rawHistory?.length) {
+  rows = state.rawHistory
+    .filter(r => {
+      const d = r.date || (r.updated_at_utc ? String(r.updated_at_utc).slice(0,10) : "");
+      return d === selectedDate;
+    })
+    .map(r => ({
+      brand: r.brand,
+      group: r.group,
+      deposit: r.deposit,
+      withdrawal: r.withdrawal
+    }));
+}
 
   let csv = [];
   
