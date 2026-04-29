@@ -46,8 +46,8 @@
 
         <div class="topbar-actions">
           <button id="refreshBtn" class="btn primary">Refresh Data</button>
-<select id="reportDateFilter" class="btn ghost" title="Report Date"></select>
-<button id="downloadReportBtn" class="btn ghost">Download Report</button>
+          <select id="reportDateFilter" class="btn ghost report-date-filter" title="Report Date"></select>
+          <button id="downloadReportBtn" class="btn ghost">Download Excel Report</button>
           <div class="last-update">
             <span>Last Updated</span>
             <strong id="lastUpdated">Loading...</strong>
@@ -55,63 +55,26 @@
         </div>
       </header>
 
-
-
-      <section id="executiveAlert" class="executive-alert">
-        <div class="alert-main">
-          <span class="alert-icon">⚠️</span>
-          <div>
-            <p class="eyebrow">Executive Alert</p>
-            <h3 id="alertHeadline">Analyzing live risk position...</h3>
-            <p id="alertSubline" class="muted">Waiting for latest deposit and withdrawal data.</p>
-          </div>
-        </div>
-        <div class="alert-kpis">
-          <div>
-            <span>Net Advantage</span>
-            <strong id="alertNetAdvantage">--</strong>
-          </div>
-          <div>
-            <span>Pressure Leader</span>
-            <strong id="alertPressureLeader">--</strong>
-          </div>
-          <div>
-            <span>Risk Brands</span>
-            <strong id="alertRiskBrands">--</strong>
-          </div>
-        </div>
-        <div class="dominance-wrap">
-          <div class="dominance-labels">
-            <span id="mcwShareLabel">MCW --</span>
-            <span id="cxShareLabel">CX --</span>
-          </div>
-          <div class="dominance-bar">
-            <span id="mcwDominanceBar" class="mcw-bar" style="width: 50%"></span>
-            <span id="cxDominanceBar" class="cx-bar" style="width: 50%"></span>
-          </div>
-        </div>
-      </section>
-
       <section id="overview" class="status-strip">
         <div class="status-card">
-          <span>MCW Net Flow</span>
+          <span>Total Deposit</span>
           <strong id="totalDeposit">--</strong>
-          <small>MCW deposit - withdrawal</small>
+          <small>All tracked brands</small>
         </div>
         <div class="status-card">
-          <span>CX Net Flow</span>
+          <span>Total Withdrawal</span>
           <strong id="totalWithdrawal">--</strong>
-          <small>CX deposit - withdrawal</small>
+          <small>All tracked brands</small>
         </div>
         <div class="status-card">
-          <span>Net Gap</span>
+          <span>Net Flow</span>
           <strong id="netFlow">--</strong>
-          <small>Stronger group by net flow</small>
+          <small>Deposit - Withdrawal</small>
         </div>
         <div class="status-card">
-          <span>Pressure Gap</span>
+          <span>Withdrawal Pressure</span>
           <strong id="withdrawalPressure">--</strong>
-          <small>Higher withdrawal pressure</small>
+          <small>Withdrawal / Deposit</small>
         </div>
       </section>
 
@@ -165,34 +128,6 @@
             <span id="riskLevel" class="pill neutral">Normal</span>
           </div>
           <div id="riskList" class="risk-list"></div>
-        </article>
-      </section>
-
-
-
-      <section class="grid two-col decision-grid">
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Risk Momentum</p>
-              <h3>Pressure Direction</h3>
-              <p class="muted">Compares current pressure with recent history average.</p>
-            </div>
-            <span class="pill neutral">Live</span>
-          </div>
-          <div id="riskMomentumList" class="signal-list"></div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Top Risk Drivers</p>
-              <h3>What Needs Attention</h3>
-              <p class="muted">Highlights pressure, withdrawal spikes, and weak deposits.</p>
-            </div>
-            <span class="pill neutral">CEO View</span>
-          </div>
-          <div id="riskDriversList" class="signal-list"></div>
         </article>
       </section>
 
@@ -289,25 +224,14 @@
       </section>
 
       <section class="panel chart-panel" id="trend">
-
-  <div class="panel-head">
-    <div>
-      <p class="eyebrow">Hourly / Historical</p>
-      <h3>Trend from History</h3>
-      <p class="muted">Shows deposit and withdrawal trend by selected group.</p>
-    </div>
-
-    <div class="table-controls">
-      <select id="historyTrendFilter">
-        <option value="all">All Brands</option>
-        <option value="MCW">MCW Only</option>
-        <option value="CX">CX Only</option>
-      </select>
-    </div>
-  </div>
-
-  <canvas id="trendChart"></canvas>
-
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Hourly / Historical</p>
+            <h3>Trend from History</h3>
+            <p class="muted">Shows the latest available history points, up to 7 days.</p>
+          </div>
+        </div>
+        <canvas id="trendChart"></canvas>
       </section>
 
 
@@ -385,10 +309,10 @@
       <section class="panel alerts-panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Decision Notes</p>
-            <h3>Auto Summary</h3>
+            <p class="eyebrow">Future Ready</p>
+            <h3>Alert Preview</h3>
           </div>
-          <span class="pill good">Active</span>
+          <span class="pill neutral">Phase 2</span>
         </div>
         <div id="alertPreview" class="alert-preview"></div>
       </section>
@@ -397,6 +321,7 @@
 
   <div id="toast" class="toast">Data loaded</div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
