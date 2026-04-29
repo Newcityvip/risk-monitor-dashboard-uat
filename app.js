@@ -47,6 +47,7 @@ async function loadDashboard() {
 
     state.latest = latestResult.value;
     state.rawHistory = historyResult.status === "fulfilled" ? normalizeRawHistory(historyResult.value) : [];
+    populateReportDates();
     state.history = normalizeHistory(state.rawHistory);
     state.rows = normalizeLatest(state.latest);
 
@@ -970,4 +971,16 @@ function downloadDailyReport() {
   a.click();
 
   URL.revokeObjectURL(url);
+}
+function populateReportDates() {
+  const select = $("reportDateFilter");
+  if (!select || !state.rawHistory || state.rawHistory.length === 0) return;
+
+  const dates = [...new Set(
+    state.rawHistory
+      .map(r => r.date || (r.updated_at_utc ? String(r.updated_at_utc).slice(0, 10) : ""))
+      .filter(Boolean)
+  )].sort().reverse();
+
+  select.innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join("");
 }
