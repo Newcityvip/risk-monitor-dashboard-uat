@@ -1003,9 +1003,10 @@ function getReportDataForDate(selectedDate) {
   let raw = state.latest;
   let rows = state.rows;
   let source = "Live dashboard data";
+  let daySnapshots = [];
 
   if (selectedDate && selectedDate !== latestDate) {
-    const daySnapshots = (state.rawHistory || [])
+    daySnapshots = (state.rawHistory || [])
       .filter((item) => getReportDateValue(item) === selectedDate)
       .sort((a, b) => {
         const ta = getSnapshotTime(a) || 0;
@@ -1018,9 +1019,114 @@ function getReportDataForDate(selectedDate) {
     source = raw ? "Latest available history snapshot" : "No snapshot found - zero-filled report";
   }
 
-  const hours = getReportHours(raw, selectedDate);
-  const hourlyRows = buildHourlyBrandDetailRows(raw, selectedDate, hours);
+  const hourlyRaw = resolveHourlyReportRaw(raw, selectedDate || latestDate);
+  const hours = getReportHours(hourlyRaw, selectedDate || latestDate);
+  let hourlyRows = buildHourlyBrandDetailRows(hourlyRaw, selectedDate || latestDate, hours);
+
+  if (!hasMeaningfulHourlyRows(hourlyRows)) {
+    hourlyRows = buildHourlyRowsFromSnapshots(daySnapshots, selectedDate || latestDate, hours);
+  }
+
   return { date: selectedDate || latestDate, rows, raw, source, hours, hourlyRows };
+}
+
+function resolveHourlyReportRaw(primaryRaw, date) {
+  if (hasHourlyDataForDate(primaryRaw, date)) return primaryRaw;
+
+  const historyWithHourly = (state.rawHistory || [])
+    .filter((item) => hasHourlyDataForDate(item, date))
+    .sort((a, b) => (getSnapshotTime(a) || 0) - (getSnapshotTime(b) || 0));
+
+  if (historyWithHourly.length) return historyWithHourly[historyWithHourly.length - 1];
+  if (hasHourlyDataForDate(state.latest, date)) return state.latest;
+  return primaryRaw;
+}
+
+function hasHourlyDataForDate(raw, date) {
+  if (!raw || !date) return false;
+
+  return ["deposit", "withdrawal"].some((type) => {
+    const root = getHourlyRoot(raw, type);
+    return ALL_BRANDS.some((brand) => {
+      const brandNode = getCaseInsensitiveValue(root, brand);
+      if (!brandNode || typeof brandNode !== "object") return false;
+
+      const dateNode = getCaseInsensitiveValue(brandNode, date);
+      const scopedNode = dateNode && typeof dateNode === "object" ? dateNode : brandNode;
+
+      return Object.keys(scopedNode).some((hourKey) => {
+        const point = scopedNode[hourKey];
+        return point && typeof point === "object";
+      });
+    });
+  });
+}
+
+
+function hasMeaningfulHourlyRows(rows) {
+  return rows.some((row) =>
+    toNumber(row["Deposit Count"]) ||
+    toNumber(row["Deposit Amount"]) ||
+    toNumber(row["Withdrawal Count"]) ||
+    toNumber(row["Withdrawal Amount"])
+  );
+}
+
+function buildHourlyRowsFromSnapshots(daySnapshots, date, hours) {
+  if (!daySnapshots.length) return [];
+
+  const bucketMap = new Map();
+
+  daySnapshots.forEach((snapshot) => {
+    const brands = snapshot?.brands || {};
+    ALL_BRANDS.forEach((brand) => {
+      const info = getCaseInsensitiveValue(brands, brand);
+      if (!info || typeof info !== "object") return;
+
+      const group = MCW_BRANDS.includes(brand) ? "MCW" : "CX";
+      const hour = normalizeSnapshotHour(info.deposit_time || info.withdrawal_time);
+      const safeHour = hours.includes(hour) ? hour : hour || "00:00";
+      const key = `${brand}|${safeHour}`;
+
+      bucketMap.set(key, {
+        Date: date,
+        Hour: safeHour,
+        Group: group,
+        Brand: brand,
+        "Deposit Count": toNumber(info.deposit_count),
+        "Deposit Amount": toNumber(info.deposit_amount),
+        "Deposit Difference": toNumber(info.deposit_difference),
+        "Withdrawal Count": toNumber(info.withdrawal_count),
+        "Withdrawal Amount": toNumber(info.withdrawal_amount),
+        "Withdrawal Difference": toNumber(info.withdrawal_difference)
+      });
+    });
+  });
+
+  const rows = [];
+  ALL_BRANDS.forEach((brand) => {
+    const group = MCW_BRANDS.includes(brand) ? "MCW" : "CX";
+    hours.forEach((hour) => {
+      const key = `${brand}|${hour}`;
+      const base = bucketMap.get(key) || {
+        Date: date, Hour: hour, Group: group, Brand: brand,
+        "Deposit Count": 0, "Deposit Amount": 0, "Deposit Difference": 0,
+        "Withdrawal Count": 0, "Withdrawal Amount": 0, "Withdrawal Difference": 0
+      };
+      const net = base["Deposit Amount"] - base["Withdrawal Amount"];
+      const pressure = base["Deposit Amount"] > 0 ? base["Withdrawal Amount"] / base["Deposit Amount"] : base["Withdrawal Amount"] > 0 ? 9.99 : 0;
+      rows.push({ ...base, "Net Flow": net, "Pressure %": toPercentNumber(pressure), "Risk Status": getRiskLevel(pressure, net) });
+    });
+  });
+
+  return rows;
+}
+
+function normalizeSnapshotHour(hour) {
+  if (!hour) return "00:00";
+  const match = String(hour).match(/^(\d{1,2})/);
+  if (!match) return "00:00";
+  return `${String(Number(match[1])).padStart(2, "0")}:00`;
 }
 
 function buildExecutiveSummaryRows(report) {
